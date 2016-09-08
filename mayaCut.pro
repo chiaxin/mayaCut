@@ -6,7 +6,7 @@ TEMPLATE = app
 TARGET = mayaCut
 DESTDIR = ../x64/Debug
 QT += core widgets gui
-CONFIG += debug console static
+CONFIG += release console
 DEFINES += QT_DLL QT_WIDGETS_LIB
 INCLUDEPATH += . \
     ./GeneratedFiles/Debug

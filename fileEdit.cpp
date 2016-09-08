@@ -39,6 +39,10 @@ void FileEdit::dragEnterEvent(QDragEnterEvent * event)
 
 void FileEdit::mouseDoubleClickEvent(QMouseEvent * event)
 {
+	if (this->text().isEmpty())
+	{
+		return;
+	}
 	if (event->button() == Qt::LeftButton)
 	{
 		QFileInfo fileinfo(this->text());

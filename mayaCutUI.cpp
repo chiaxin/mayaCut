@@ -31,7 +31,8 @@
 #include "fileEdit.h"
 #include "dirEdit.h"
 
-const QString VERSION(" 0.0.2 Beta");
+const QString VERSION(" 0.0.2 beta");
+const QString TITLE("Maya Cut (Clean-up tool) " + VERSION);
 const QSize WIDGET_SIZE(360, 200);
 
 // Mayapy programs default path
@@ -43,7 +44,7 @@ const QStringList MAYAPYS_DEF = {
 };
 
 // Custom python script for maya path(under the program's directory)
-const char * PY_SCRIPT = "/python/mayaCut.py";
+const char * PY_SCRIPT = "/mayaCut.py";
 
 const char * MayaCutUI::OPTION_NAME[]
 {
@@ -59,7 +60,7 @@ const char * MayaCutUI::FLAGS[]
 };
 
 // UI Font
-const QFont COMMON_FONT("Arial");
+const QFont COMMON_FONT("DeJavu Sans");
 
 // Setting key names
 const QString INIT_SETTING("./config.ini");
@@ -81,20 +82,19 @@ MayaCutUI::MayaCutUI(QWidget * parent) :
 	mayapy_use(MAYAPYS_DEF.at(0)),
 	p_proc(new QProcess(this))
 {
-	this->setWindowTitle("Make Simple " + VERSION);
+	this->setWindowTitle(TITLE);
 	this->setFont(COMMON_FONT);
-	this->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+	this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 	QPixmap titlePixmap(":/icons/title");
 	QIcon titleIcon(titlePixmap);
 	this->setWindowIcon(titleIcon);
 	//
 	QVBoxLayout * main_layout = new QVBoxLayout;
-	QGroupBox * p_pathGroupBox = new QGroupBox("Paths (Double click to open directory)");
+	QGroupBox * p_pathGroupBox = new QGroupBox("File & Path");
 	QVBoxLayout * p_pathLayout = new QVBoxLayout(p_pathGroupBox);
 	// Here is for test
 	// FileEdit * p_fileEditTest = new FileEdit;
 	// p_pathLayout->addWidget(p_fileEditTest);
-	// test end
 	p_pathLayout->addLayout(createBrowseField(
 		p_mayaFileSource, "Maya File", &MayaCutUI::browseMayaFile
 	));
@@ -108,13 +108,13 @@ MayaCutUI::MayaCutUI(QWidget * parent) :
 	QGroupBox * p_executeGroupBox = new QGroupBox("Execute");
 	QVBoxLayout * p_executeLayout = new QVBoxLayout(p_executeGroupBox);
 	// Buttons
-	QPushButton * p_execute_button = new QPushButton;
+	QPushButton * p_execute_button = new QPushButton("Go!");
 	p_execute_button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	p_execute_button->setMinimumSize(QSize(90, 60));
 	QPixmap pixmap(":/icons/execute");
-	QIcon btnIcon(pixmap);
-	p_execute_button->setIcon(btnIcon);
-	p_execute_button->setIconSize(pixmap.rect().size()/2);
-	//p_execute_button->setMinimumSize(QSize(90, 60));
+	//QIcon btnIcon(pixmap);
+	//p_execute_button->setIcon(btnIcon);
+	//p_execute_button->setIconSize(pixmap.rect().size()/2);
 	QPushButton * p_cancel_button = new QPushButton("Cancel");
 	p_cancel_button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 	p_cancel_button->setMinimumSize(QSize(90, 60));
@@ -139,10 +139,8 @@ MayaCutUI::MayaCutUI(QWidget * parent) :
 	main_layout->addWidget(p_pathGroupBox);
 	main_layout->addLayout(p_lowerLayout);
 	// Connect
-	connect(p_execute_button, &QPushButton::clicked,
-		this, &MayaCutUI::doIt);
-	connect(p_cancel_button, &QPushButton::clicked,
-		this, &QWidget::close);
+	connect(p_execute_button, &QPushButton::clicked, this, &MayaCutUI::doIt);
+	connect(p_cancel_button, &QPushButton::clicked, this, &QWidget::close);
 	connect(p_mayaVersions,
 		static_cast<void (QComboBox::*)(int)>(
 		&QComboBox::currentIndexChanged),
@@ -197,8 +195,12 @@ QHBoxLayout * MayaCutUI::createBrowseField(
 
 void MayaCutUI::browseMayaFile()
 {
+	QString currPath(p_mayaFileSource->text());
+	if (currPath.isEmpty()) {
+		currPath = "D:/";
+	}
 	QString filename = QFileDialog::getOpenFileName(
-		this, "Select Maya File", "D:/", "Maya File (*.ma *.mb)"
+		this, "Open Maya File", currPath, "Maya File (*.ma *.mb)"
 	);
 	if (!filename.isEmpty())
 	{
@@ -208,8 +210,18 @@ void MayaCutUI::browseMayaFile()
 
 void MayaCutUI::browseDestinationFile()
 {
+	QString currPath(p_destination->text());
+	if (currPath.isEmpty()) {
+		currPath = "D:/";
+	}
+	else
+	{
+		QFileInfo fileinfo(currPath);
+		QDir dir = fileinfo.dir();
+		currPath = dir.absolutePath();
+	}
 	QString filename = QFileDialog::getSaveFileName(
-		this, "Create Maya File", "D:/", "Maya File (*.ma *.mb)"
+		this, "Save Maya File", currPath, "Maya File (*.ma *.mb)"
 	);
 	if (!filename.isEmpty())
 	{
@@ -220,7 +232,7 @@ void MayaCutUI::browseDestinationFile()
 void MayaCutUI::browseTexturePath()
 {
 	QString dirname = QFileDialog::getExistingDirectory(
-		this, "Select Copy Texture Path", "D:/"
+		this, "Select Copy Texture Path", p_texturePath->text()
 	);
 	if (!dirname.isEmpty())
 	{
@@ -242,6 +254,12 @@ void MayaCutUI::doIt()
 		return;
 	}
 	// Check the source file is exist and not empty
+	if (!QFileInfo(QDir::currentPath() + PY_SCRIPT).isReadable())
+	{
+		QMessageBox::warning(this, "Error",
+			"The python script was not found", QMessageBox::Ok);
+		return;
+	}
 	QString source = p_mayaFileSource->text();
 	QString dest = p_destination->text();
 	if (source.isEmpty() || dest.isEmpty())
@@ -288,7 +306,7 @@ void MayaCutUI::closeEvent(QCloseEvent * event)
 {
 	QMessageBox::StandardButton user_push
 		= QMessageBox::information(this, "Save Changes",
-			"Do you want to save currect?",
+			"Do you want to save the changes?",
 			QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
 	switch (user_push)
 	{
