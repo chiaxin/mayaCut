@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file alias="execute">Resources/makeSimpleExecute.png</file>
+        <file alias="title">Resources/title.png</file>
+    </qresource>
+</RCC>
